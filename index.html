@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="hu">
 <head>
@@ -68,7 +69,7 @@
 
     <div id="score">Almák: 0 | Hossz: 3</div>
 
-    <canvas id="game" width="600" height="600"></canvas>
+    <canvas id="game" width="400" height="400"></canvas>
 
     <div id="message">
         Használd a ⬆️ ⬇️ ⬅️ ➡️ nyilakat!
@@ -86,9 +87,15 @@ const ctx = canvas.getContext("2d");
 // Egy egység mérete
 const unit = 20;
 
-// Pálya mérete
-const cols = canvas.width / unit;
-const rows = canvas.height / unit;
+
+// A pálya 20×20 egység
+// Az eredeti 30×30 volt, tehát mindkét irányban 10 egységgel kisebb
+const cols = 20;
+const rows = 20;
+
+
+// Egyszerre 5 alma
+const APPLE_COUNT = 5;
 
 
 // Kígyó
@@ -96,8 +103,10 @@ let snake;
 let direction;
 let nextDirection;
 
-// Alma
-let apple;
+
+// Almák
+let apples;
+
 
 // Pontszám
 let score;
@@ -111,9 +120,9 @@ let gameOver = false;
 function startGame() {
 
     snake = [
-        { x: 15, y: 15 },
-        { x: 14, y: 15 },
-        { x: 13, y: 15 }
+        { x: 10, y: 10 },
+        { x: 9, y: 10 },
+        { x: 8, y: 10 }
     ];
 
     direction = {
@@ -130,42 +139,109 @@ function startGame() {
 
     gameOver = false;
 
-    createApple();
+    createApples();
 
     updateScore();
 }
 
 
-// Alma létrehozása
-function createApple() {
+// 5 alma létrehozása
+function createApples() {
 
-    let validPosition = false;
+    apples = [];
 
-    while (!validPosition) {
+    while (apples.length < APPLE_COUNT) {
 
-        apple = {
+        const newApple = {
             x: Math.floor(Math.random() * cols),
             y: Math.floor(Math.random() * rows)
         };
 
-        validPosition = true;
+        let valid = true;
 
-        // Ne jelenjen meg a kígyó testében
+
+        // Ne legyen a kígyóban
         for (let part of snake) {
 
             if (
-                part.x === apple.x &&
-                part.y === apple.y
+                part.x === newApple.x &&
+                part.y === newApple.y
             ) {
-                validPosition = false;
+                valid = false;
                 break;
             }
+        }
+
+
+        // Ne legyen másik almán
+        for (let apple of apples) {
+
+            if (
+                apple.x === newApple.x &&
+                apple.y === newApple.y
+            ) {
+                valid = false;
+                break;
+            }
+        }
+
+
+        if (valid) {
+            apples.push(newApple);
         }
     }
 }
 
 
-// Billentyűzet kezelése
+// Új alma létrehozása
+function createOneApple() {
+
+    while (true) {
+
+        const newApple = {
+            x: Math.floor(Math.random() * cols),
+            y: Math.floor(Math.random() * rows)
+        };
+
+        let valid = true;
+
+
+        // Ne legyen a kígyón
+        for (let part of snake) {
+
+            if (
+                part.x === newApple.x &&
+                part.y === newApple.y
+            ) {
+                valid = false;
+                break;
+            }
+        }
+
+
+        // Ne legyen másik almán
+        for (let apple of apples) {
+
+            if (
+                apple.x === newApple.x &&
+                apple.y === newApple.y
+            ) {
+                valid = false;
+                break;
+            }
+        }
+
+
+        if (valid) {
+
+            apples.push(newApple);
+            return;
+        }
+    }
+}
+
+
+// Billentyűzet
 document.addEventListener("keydown", function(event) {
 
     if (event.key === "ArrowUp") {
@@ -218,7 +294,6 @@ function update() {
     }
 
 
-    // Új irány
     direction = nextDirection;
 
 
@@ -243,11 +318,11 @@ function update() {
 
 
     // Saját testnek ütközés
-    for (let i = 0; i < snake.length; i++) {
+    for (let part of snake) {
 
         if (
-            head.x === snake[i].x &&
-            head.y === snake[i].y
+            head.x === part.x &&
+            head.y === part.y
         ) {
 
             endGame();
@@ -260,23 +335,35 @@ function update() {
     snake.unshift(head);
 
 
-    // Alma megevése
-    if (
-        head.x === apple.x &&
-        head.y === apple.y
-    ) {
+    // Megnézzük, evett-e almát
+    let ateApple = false;
 
-        score++;
+    for (let i = apples.length - 1; i >= 0; i--) {
 
-        // A kígyó nem kapja le a farkát,
-        // ezért pontosan 1 egységgel nő
-        createApple();
+        if (
+            head.x === apples[i].x &&
+            head.y === apples[i].y
+        ) {
 
-        updateScore();
+            // Alma eltávolítása
+            apples.splice(i, 1);
 
-    } else {
+            score++;
 
-        // Ha nincs alma, a farok eltűnik
+            // Új alma létrehozása
+            createOneApple();
+
+            ateApple = true;
+
+            updateScore();
+
+            break;
+        }
+    }
+
+
+    // Ha nem evett, a farok eltűnik
+    if (!ateApple) {
         snake.pop();
     }
 }
@@ -287,6 +374,7 @@ function draw() {
 
     // Háttér
     ctx.fillStyle = "#202020";
+
     ctx.fillRect(
         0,
         0,
@@ -316,26 +404,30 @@ function draw() {
     }
 
 
-    // Alma
-    ctx.fillStyle = "#ff3030";
+    // Összes alma
+    for (let apple of apples) {
 
-    ctx.fillRect(
-        apple.x * unit,
-        apple.y * unit,
-        unit,
-        unit
-    );
+        // Alma
+        ctx.fillStyle = "#ff3030";
+
+        ctx.fillRect(
+            apple.x * unit,
+            apple.y * unit,
+            unit,
+            unit
+        );
 
 
-    // Alma szára
-    ctx.fillStyle = "#704214";
+        // Alma szára
+        ctx.fillStyle = "#704214";
 
-    ctx.fillRect(
-        apple.x * unit + 8,
-        apple.y * unit - 4,
-        4,
-        5
-    );
+        ctx.fillRect(
+            apple.x * unit + 8,
+            apple.y * unit - 4,
+            4,
+            5
+        );
+    }
 
 
     // Kígyó
@@ -343,12 +435,12 @@ function draw() {
 
         if (index === 0) {
 
-            // FEJ
+            // Fej
             ctx.fillStyle = "#5cff70";
 
         } else {
 
-            // TEST
+            // Test
             ctx.fillStyle = "#28b83f";
         }
 
@@ -361,12 +453,11 @@ function draw() {
         );
 
 
-        // Fej szemei
+        // Szemek
         if (index === 0) {
 
             ctx.fillStyle = "white";
 
-            // Szemek helyzete az irány alapján
             let eye1;
             let eye2;
 
@@ -410,10 +501,11 @@ function draw() {
     });
 
 
-    // Game Over felirat
+    // Game Over
     if (gameOver) {
 
         ctx.fillStyle = "rgba(0,0,0,0.65)";
+
         ctx.fillRect(
             0,
             0,
@@ -433,7 +525,7 @@ function draw() {
         );
 
 
-        ctx.font = "22px Arial";
+        ctx.font = "20px Arial";
 
         ctx.fillText(
             "Nyomd meg az Újrakezdés gombot!",
@@ -444,7 +536,7 @@ function draw() {
 }
 
 
-// Pontszám frissítése
+// Pontszám
 function updateScore() {
 
     document.getElementById("score").textContent =
@@ -478,14 +570,15 @@ function gameLoop() {
 }
 
 
-// Játék elindítása
+// Indítás
 startGame();
 
 
-// 120 ms-onként mozog a kígyó
+// Mozgás sebessége
 setInterval(gameLoop, 120);
 
 </script>
 
 </body>
 </html>
+```
